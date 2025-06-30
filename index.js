@@ -7,15 +7,15 @@ import AuthAdminRoute from "./routes/AdminAuth.js";
 import GetRoutes from "./routes/GetRoute.js";
 import VisitorsRoute from "./routes/VisitorsRoute.js";
 
+dotenv.config();
+
 const STATIC_PATH =
     process.env.NODE_ENV === "production"
         ? `${process.cwd()}/frontend/dist`
         : `${process.cwd()}/frontend/`;
 
-dotenv.config();
-
 const app = express();
-const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT || "3000", 10);
+const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT || "2000", 10);
 
 app.use(cors());
 app.use(express.json());
