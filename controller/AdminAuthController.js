@@ -56,7 +56,7 @@ export const AdminLogin = async (req, res) => {
                     const token = jwt.sign(
                         { id: result[0].id, email: result[0].email },
                         process.env.JWT_SECRET,
-                        { expiresIn: "2h" }
+                        { expiresIn: "1d" }
                     );
                     return res.status(200).json({ message: "Login successfull.", success: true, token: token, userId: result[0].id});
                 } else {
