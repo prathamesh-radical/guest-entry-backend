@@ -9,8 +9,6 @@ import {
   DeleteVisitor,
   UpdateApartment,
   UpdateFlat,
-  UpdateUserData,
-  UpdateUserPassword,
   UpdateVisitor,
 } from "../controller/VisitorsController.js";
 import authenticateToken from "../middlewares/verifyToken.js";
@@ -25,8 +23,6 @@ VisitorsRoute.post("/addVisitor", authenticateToken, AddVisitor);
 VisitorsRoute.put("/updateApartment", authenticateToken, UpdateApartment);
 VisitorsRoute.put("/updateFlat", authenticateToken, UpdateFlat);
 VisitorsRoute.put("/updateVisitor", authenticateToken, UpdateVisitor);
-VisitorsRoute.put("/updateUserData", authenticateToken, UpdateUserData);
-VisitorsRoute.put("/updateUserPassword", authenticateToken, UpdateUserPassword);
 VisitorsRoute.delete("/deleteApartment", authenticateToken, DeleteApartment);
 VisitorsRoute.delete("/deleteFlat", authenticateToken, DeleteFlat);
 VisitorsRoute.delete("/deleteVisitor", authenticateToken, DeleteVisitor);
