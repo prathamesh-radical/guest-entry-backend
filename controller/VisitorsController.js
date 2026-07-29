@@ -2,138 +2,6 @@ import db from "../db/db.js";
 import bcrypt from "bcryptjs";
 import { promisify } from "util";
 
-// Add Functions
-export const AddApartment = async (req, res) => {
-  const { apartment_name, total_floors } = req.body;
-
-  if (!req?.query?.user_id || !apartment_name || !total_floors) {
-    return res
-      .status(400)
-      .json({ message: "All fields are required", success: false });
-  }
-
-  try {
-    db.query(
-      "SELECT * FROM apartment WHERE apartment_name = ? AND user_id = ?",
-      [apartment_name, req?.query?.user_id],
-      (err, result) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Error checking existing user", success: false });
-        }
-        if (result.length > 0) {
-          return res.status(400).json({
-            message: "This apartment is already registered.",
-            success: false,
-          });
-        }
-        db.query(
-          "INSERT INTO apartment (user_id, apartment_name, total_floors) VALUES (?, ?, ?)",
-          [req?.query?.user_id, apartment_name, total_floors],
-          (err, result) => {
-            if (err) {
-              return res.status(500).json({
-                message: "Error while registering the apartment.",
-                success: false,
-              });
-            }
-            if (result.affectedRows > 0) {
-              return res.status(200).json({
-                message: "Apartment added successfully.",
-                success: true,
-              });
-            } else {
-              return res.status(404).json({
-                message: "No record found with the provided id",
-                success: false,
-              });
-            }
-          },
-        );
-      },
-    );
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", success: false });
-  }
-};
-
-export const AddFlat = async (req, res) => {
-  const { first_name, last_name, phone_no, apartment_name, floor_no, flat_no } =
-    req.body;
-
-  if (
-    !req?.query?.user_id ||
-    !first_name ||
-    !last_name ||
-    !phone_no ||
-    !apartment_name ||
-    !floor_no ||
-    !flat_no
-  ) {
-    return res
-      .status(400)
-      .json({ message: "All fields are required", success: false });
-  }
-
-  const query = promisify(db.query).bind(db);
-
-  try {
-    const existingFlat = await query(
-      "SELECT * FROM flat WHERE apartment_name = ? AND floor_no = ? AND flat_no = ? AND user_id = ?",
-      [apartment_name, floor_no, flat_no, req?.query?.user_id],
-    );
-
-    if (existingFlat.length > 0) {
-      return res.status(400).json({
-        message:
-          "This flat is already registered for the entered floor no of selected apartment.",
-        success: false,
-      });
-    }
-
-    const result = await query(
-      "INSERT INTO flat (user_id, first_name, last_name, phone_no, apartment_name, floor_no, flat_no) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [
-        req?.query?.user_id,
-        first_name,
-        last_name,
-        phone_no,
-        apartment_name,
-        floor_no,
-        flat_no,
-      ],
-    );
-
-    if (result.affectedRows > 0) {
-      return res.status(200).json({
-        message: "Flat added successfully.",
-        success: true,
-      });
-    } else {
-      return res.status(404).json({
-        message: "No record found with the provided id",
-        success: false,
-      });
-    }
-  } catch (error) {
-    if (error.code === "ETIMEDOUT") {
-      return res.status(503).json({
-        message: "Database connection timeout. Please try again.",
-        success: false,
-      });
-    }
-
-    return res.status(500).json({
-      message: "Internal Server Error",
-      success: false,
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-};
-
 export const AddVisitor = async (req, res) => {
   const {
     first_name,
@@ -181,7 +49,6 @@ export const AddVisitor = async (req, res) => {
         }
 
         if (result.length > 0) {
-          // Existing visitor — just log the visit
           const visitorId = result[0].id;
 
           db.query(
@@ -209,11 +76,10 @@ export const AddVisitor = async (req, res) => {
             },
           );
         } else {
-          // New visitor
           db.query(
-            `INSERT INTO visitor 
-              (user_id, first_name, last_name, phone_no, address, is_active, purpose, visitor_count, vehicle_type, vehicle_no, person_to_meet, apartment_name, floor_no, flat_no) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO visitor
+              (user_id, first_name, last_name, phone_no, address, is_active, purpose, visitor_count, vehicle_type, vehicle_no, person_to_meet, apartment_name, floor_no, flat_no)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               user_id,
               first_name,
@@ -232,7 +98,6 @@ export const AddVisitor = async (req, res) => {
             ],
             (err3, newVisitor) => {
               if (err3) {
-                console.error("Visitor insert error:", err3);
                 return res.status(500).json({
                   message: "Insert error",
                   success: false,
@@ -304,250 +169,6 @@ export const GetVisitorByPhone = (req, res) => {
       });
     },
   );
-};
-
-// Update Functions
-export const UpdateApartment = async (req, res) => {
-  const { apartment_name, total_floors, id } = req.body;
-  const { user_id } = req.query;
-
-  if (!user_id || !id || !apartment_name || !total_floors) {
-    return res
-      .status(400)
-      .json({ message: "All fields are required", success: false });
-  }
-
-  try {
-    db.query(
-      "SELECT * FROM apartment WHERE id = ? AND user_id = ?",
-      [id, user_id],
-      (err, selectResults) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Error checking apartment", success: false });
-        }
-
-        if (!selectResults || selectResults.length === 0) {
-          return res.status(404).json({
-            message: "No apartment found with the provided id",
-            success: false,
-          });
-        }
-
-        const currentApartment = selectResults[0];
-        const oldName = currentApartment.apartment_name;
-        const oldFloors = currentApartment.total_floors;
-
-        if (
-          oldName === apartment_name &&
-          Number(oldFloors) === Number(total_floors)
-        ) {
-          return res.status(200).json({
-            message: "Apartment updated successfully (no changes)",
-            success: true,
-          });
-        }
-
-        const performUpdate = () => {
-          db.query(
-            "UPDATE apartment SET apartment_name = ?, total_floors = ? WHERE id = ? AND user_id = ?",
-            [apartment_name, total_floors, id, user_id],
-            (err, updateResult) => {
-              if (err) {
-                return res.status(500).json({
-                  message: "Error while updating the apartment.",
-                  success: false,
-                });
-              }
-
-              if (updateResult.affectedRows === 0) {
-                return res.status(404).json({
-                  message: "No record found with the provided id",
-                  success: false,
-                });
-              }
-
-              if (oldName !== apartment_name) {
-                db.query(
-                  "UPDATE flat SET apartment_name = ? WHERE apartment_name = ? AND user_id = ?",
-                  [apartment_name, oldName, user_id],
-                  (err) => {
-                    if (err) {
-                      return res.status(200).json({
-                        message:
-                          "Apartment updated successfully, but failed to update related flats.",
-                        success: true,
-                      });
-                    }
-
-                    return res.status(200).json({
-                      message: "Apartment updated successfully.",
-                      success: true,
-                    });
-                  },
-                );
-              } else {
-                return res.status(200).json({
-                  message: "Apartment updated successfully.",
-                  success: true,
-                });
-              }
-            },
-          );
-        };
-
-        if (oldName !== apartment_name) {
-          db.query(
-            "SELECT * FROM apartment WHERE apartment_name = ? AND user_id = ? AND id != ?",
-            [apartment_name, user_id, id],
-            (err, nameResults) => {
-              if (err) {
-                return res.status(500).json({
-                  message: "Error checking existing apartment name",
-                  success: false,
-                });
-              }
-
-              if (nameResults && nameResults.length > 0) {
-                return res.status(400).json({
-                  message:
-                    "This apartment name is already registered by another record.",
-                  success: false,
-                });
-              }
-
-              performUpdate();
-            },
-          );
-        } else {
-          performUpdate();
-        }
-      },
-    );
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", success: false });
-  }
-};
-
-export const UpdateFlat = async (req, res) => {
-  const {
-    first_name,
-    last_name,
-    phone_no,
-    apartment_name,
-    floor_no,
-    flat_no,
-    id,
-  } = req.body;
-  const { user_id } = req.query;
-
-  if (
-    !user_id ||
-    !id ||
-    !first_name ||
-    !last_name ||
-    !phone_no ||
-    !apartment_name ||
-    !floor_no ||
-    !flat_no
-  ) {
-    return res
-      .status(400)
-      .json({ message: "All fields are required", success: false });
-  }
-
-  try {
-    db.query(
-      "SELECT * FROM flat WHERE id = ? AND user_id = ?",
-      [id, user_id],
-      (err, existingFlat) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Error checking flat", success: false });
-        }
-
-        if (!existingFlat || existingFlat.length === 0) {
-          return res.status(404).json({
-            message: "No flat found with the provided id",
-            success: false,
-          });
-        }
-
-        db.query(
-          "SELECT * FROM flat WHERE apartment_name = ? AND floor_no = ? AND flat_no = ? AND user_id = ? AND id != ?",
-          [apartment_name, floor_no, flat_no, user_id, id],
-          (err, duplicateFlat) => {
-            if (err) {
-              return res.status(500).json({
-                message: "Error checking duplicate flat",
-                success: false,
-              });
-            }
-
-            if (duplicateFlat && duplicateFlat.length > 0) {
-              return res.status(400).json({
-                message:
-                  "This flat number is already registered for the entered floor no of selected apartment.",
-                success: false,
-              });
-            }
-
-            db.query(
-              "UPDATE flat SET first_name = ?, last_name = ?, phone_no = ?, apartment_name = ?, floor_no = ?, flat_no = ? WHERE id = ? AND user_id = ?",
-              [
-                first_name,
-                last_name,
-                phone_no,
-                apartment_name,
-                floor_no,
-                flat_no,
-                id,
-                user_id,
-              ],
-              (err, result) => {
-                if (err) {
-                  if (err.code === "ETIMEDOUT") {
-                    return res.status(503).json({
-                      message: "Database connection timeout. Please try again.",
-                      success: false,
-                    });
-                  }
-                  return res.status(500).json({
-                    message: "Error while updating the flat.",
-                    success: false,
-                    error:
-                      process.env.NODE_ENV === "development"
-                        ? err.message
-                        : undefined,
-                  });
-                }
-
-                if (result.affectedRows > 0) {
-                  return res.status(200).json({
-                    message: "Flat updated successfully.",
-                    success: true,
-                  });
-                } else {
-                  return res.status(404).json({
-                    message: "No record found with the provided id",
-                    success: false,
-                  });
-                }
-              },
-            );
-          },
-        );
-      },
-    );
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", success: false });
-  }
 };
 
 export const UpdateVisitor = async (req, res) => {
@@ -668,140 +289,6 @@ export const UpdateVisitor = async (req, res) => {
   }
 };
 
-// Delete Functions
-export const DeleteApartment = async (req, res) => {
-  const { id } = req.body;
-
-  if (!req?.query?.user_id || !id) {
-    return res
-      .status(400)
-      .json({ message: "All fields are required", success: false });
-  }
-
-  try {
-    db.query(
-      "SELECT * FROM apartment WHERE id = ? AND user_id = ?",
-      [id, req?.query?.user_id],
-      (err, result) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Error checking apartment", success: false });
-        }
-
-        if (!result || result.length === 0) {
-          return res.status(404).json({
-            message: "No apartment found with the provided id",
-            success: false,
-          });
-        }
-
-        const apartment = result[0];
-
-        db.query(
-          "DELETE FROM flat WHERE apartment_name = ? AND user_id = ?",
-          [apartment.apartment_name, req?.query?.user_id],
-          (err) => {
-            if (err) {
-              return res.status(500).json({
-                message: "Error deleting related flats",
-                success: false,
-              });
-            }
-
-            db.query(
-              "DELETE FROM apartment WHERE id = ? AND user_id = ?",
-              [id, req?.query?.user_id],
-              (err, deleteResult) => {
-                if (err) {
-                  return res.status(500).json({
-                    message: "Error deleting apartment",
-                    success: false,
-                  });
-                }
-
-                if (deleteResult.affectedRows > 0) {
-                  return res.status(200).json({
-                    message: "Apartment deleted successfully.",
-                    success: true,
-                  });
-                } else {
-                  return res.status(404).json({
-                    message: "No record found with the provided id",
-                    success: false,
-                  });
-                }
-              },
-            );
-          },
-        );
-      },
-    );
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", success: false });
-  }
-};
-
-export const DeleteFlat = async (req, res) => {
-  const { id } = req.body;
-
-  if (!req?.query?.user_id || !id) {
-    return res
-      .status(400)
-      .json({ message: "All fields are required", success: false });
-  }
-
-  try {
-    db.query(
-      "SELECT * FROM flat WHERE id = ? AND user_id = ?",
-      [id, req?.query?.user_id],
-      (err, result) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Error checking flat", success: false });
-        }
-
-        if (!result || result.length === 0) {
-          return res.status(404).json({
-            message: "No flat found with the provided id",
-            success: false,
-          });
-        }
-
-        db.query(
-          "DELETE FROM flat WHERE id = ? AND user_id = ?",
-          [id, req?.query?.user_id],
-          (err, deleteResult) => {
-            if (err) {
-              return res
-                .status(500)
-                .json({ message: "Error deleting flat", success: false });
-            }
-
-            if (deleteResult.affectedRows > 0) {
-              return res
-                .status(200)
-                .json({ message: "Flat deleted successfully.", success: true });
-            } else {
-              return res.status(404).json({
-                message: "No record found with the provided id",
-                success: false,
-              });
-            }
-          },
-        );
-      },
-    );
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", success: false });
-  }
-};
-
 export const DeleteVisitor = async (req, res) => {
   const { id } = req.body;
 
@@ -858,5 +345,48 @@ export const DeleteVisitor = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Internal Server Error", success: false });
+  }
+};
+
+export const BulkDeleteVisitor = async (req, res) => {
+  const { ids } = req.body;
+  const { user_id } = req.query;
+
+  if (!user_id || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: "Visitor ids are required", success: false });
+  }
+
+  try {
+    const placeholders = ids.map(() => "?").join(",");
+
+    db.query(
+      `SELECT * FROM visitor WHERE id IN (${placeholders}) AND user_id = ?`,
+      [...ids, user_id],
+      (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: "Error checking visitors", success: false });
+        }
+        if (!result || result.length === 0) {
+          return res.status(404).json({ message: "No visitors found with the provided ids", success: false });
+        }
+
+        db.query(
+          `DELETE FROM visitor WHERE id IN (${placeholders}) AND user_id = ?`,
+          [...ids, user_id],
+          (err, deleteResult) => {
+            if (err) {
+              return res.status(500).json({ message: "Error deleting visitors", success: false });
+            }
+            return res.status(200).json({
+              message: `${deleteResult.affectedRows} visitor(s) deleted successfully.`,
+              success: true,
+              deletedCount: deleteResult.affectedRows,
+            });
+          },
+        );
+      },
+    );
+  } catch (error) {
+    return res.status(500).json({ message: "Internal Server Error", success: false });
   }
 };
