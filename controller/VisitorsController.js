@@ -56,7 +56,6 @@ export const AddVisitor = async (req, res) => {
             [visitorId, apartment_name, floor_no, flat_no, new Date()],
             (err2) => {
               if (err2) {
-                console.error("Visit insert error (existing visitor):", err2);
                 return res.status(500).json({
                   message: "Visit log error",
                   success: false,
@@ -115,7 +114,6 @@ export const AddVisitor = async (req, res) => {
                 [visitorId, apartment_name, floor_no, flat_no, new Date()],
                 (err4) => {
                   if (err4) {
-                    console.error("Visit insert error (new visitor):", err4);
                     return res.status(500).json({
                       message: "Visit log error",
                       success: false,
